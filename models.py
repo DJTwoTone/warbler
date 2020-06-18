@@ -130,6 +130,14 @@ class User(db.Model):
         found_user_list = [user for user in self.following if user == other_user]
         return len(found_user_list) == 1
 
+    def edit_user(self, username, email, image_url, header_image_url, bio):
+        self.username = username
+        self.email = email
+        self.image_url = image_url
+        self.header_image_url = header_image_url
+        self.bio = bio
+        db.session.commit()
+
     @classmethod
     def signup(cls, username, email, password, image_url):
         """Sign up user.

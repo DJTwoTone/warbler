@@ -4,7 +4,7 @@ from flask import Flask, render_template, request, flash, redirect, session, g
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
-from forms import UserAddForm, LoginForm, MessageForm
+from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
 from models import db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
@@ -118,8 +118,6 @@ def logout():
 
     return redirect('/login')
 
-    # IMPLEMENT THIS
-
 
 ##############################################################################
 # General user routes:
@@ -151,7 +149,7 @@ def users_show(user_id):
     # user.messages won't be in order by default
     messages = (Message
                 .query
-                .filter(Message.user_id == user_id)
+                .filter((Message.user_id == user_id) | (Message.user_id.in_([u.id for u in user.following])))
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
@@ -216,7 +214,40 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    # IMPLEMENT THIS
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    else:
+        form = UserEditForm(obj=g.user)
+
+        if form.validate_on_submit():
+
+            password = form.password.data
+            username = form.username.data,
+
+            if User.authenticate(username, password):
+                
+                g.user.edit_user(
+                username = username,
+                email = form.email.data,
+                image_url = form.image_url.data,
+                header_image_url = form.header_image_url.data,
+                bio = form.bio.data
+                )
+
+                return redirect(f'/users/{g.user.id}')
+
+            else:
+                flash("Incorrect Password", "danger")
+
+                return redirect('/')
+        else:
+
+            return render_template('users/edit.html', form=form)
+
+
+
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -299,6 +330,7 @@ def homepage():
     if g.user:
         messages = (Message
                     .query
+                    .filter()
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())

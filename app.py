@@ -265,6 +265,41 @@ def delete_user():
 
     return redirect("/signup")
 
+@app.route('/users/<user_id>/likes', methods=["GET"])
+def liked_warbles(user_id):
+    """List of liked warbles"""
+
+    if not g.user:
+        flash('Access unauthorized.', 'danger')
+        return redirect('/')
+
+    user = User.query.get_or_404(user_id)
+
+    return render_template('/users/likes.html', user=user, likes=user.likes)
+
+@app.route('/users/warble_liking/<int:msg_id>', methods=['POST'])
+def warble_liking(msg_id):
+    """Like/unlike a warble"""
+
+    if not g.user:
+        flash("Access unauthorized.", "danger")
+        return redirect("/")
+
+    msg = Message.query.get_or_404(msg_id)
+
+    if msg_id in g.user.likes:
+
+        g.user.remove_like(msg)
+
+    else:
+
+        g.user.add_like(msg)
+
+    return redirect(f'/users/{ g.user.id }/likes')
+
+
+
+
 
 ##############################################################################
 # Messages routes:

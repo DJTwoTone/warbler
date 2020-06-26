@@ -138,6 +138,14 @@ class User(db.Model):
         self.bio = bio
         db.session.commit()
 
+    def add_like(self, msg):
+        self.likes.append(msg)
+        db.session.commit()
+
+    def remove_like(self, msg):
+        self.likes.remove(msg)
+        db.session.commit()
+
     @classmethod
     def signup(cls, username, email, password, image_url):
         """Sign up user.

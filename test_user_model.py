@@ -26,7 +26,7 @@ from app import app
 # once for all tests --- in each test, we'll delete the data
 # and create fresh new clean test data
 
-db.drop_all()
+
 db.create_all()
 
 
@@ -35,57 +35,50 @@ class UserModelTestCase(TestCase):
 
     def setUp(self):
         """Create test client, add sample data."""
+        db.drop_all()
+        db.create_all()
 
         User.query.delete()
         Message.query.delete()
         Follows.query.delete()
 
-        user1 = User(
-                email="test@test.com",
-                username="testuser1",
-                password="HASHED_PASSWORD",
-                )
+        u1 = User.signup("testuser1", "test1@test.com", "password", None)
+        uid1 = 1111
+        u1.id = uid1
 
-        user2 = User(
-                email="test2@test.com",
-                username="testuser2",
-                password="HASHED_PASSWORD",
-                )
+        u2 = User.signup("testuser2", "test2@test.com", "password", None)
+        uid2 = 2222
+        u2.id = uid2
 
-        # user1 = User(USER_DATA)
-        # user2 = User(USER_DATA_2)
-        db.session.add(user1)
-        db.session.add(user2)
         db.session.commit()
+
+        self.u1 = u1
+        self.uid1 = uid1
+
+        self.u2 = u2
+        self.uid2 = uid2
 
         self.client = app.test_client()
 
     def tearDown(self):
         """Clean up fouled transactions."""
 
+        # db.session.rollback()
+        res = super().tearDown()
         db.session.rollback()
+        return res
 
     def test_user_model(self):
         """Does basic model work?"""
 
-        user1 = User.query.get('testuser1')
-        user2 = User.query.get('testuser2')
-
         # User should have no messages & no followers
-        self.assertEqual(len(user1.messages), 0)
-        self.assertEqual(len(user1.followers), 0)
+        self.assertEqual(len(self.u1.messages), 0)
+        self.assertEqual(len(self.u1.followers), 0)
 
-    # def test_repr(self):
-    #     """Does __repr__ respond properly?"""
+    def test_repr(self):
+        """Does __repr__ respond properly?"""
 
-    #     u = User(
-    #         email="test@test.com",
-    #         username="testuser",
-    #         password="HASHED_PASSWORD"
-    #     )
 
-    #     db.session.add(u)
-    #     db.session.commit()
-
-    #     self.assertEqual(repr(u), "<User #1: testuser, test@test.com>")
+        self.assertEqual(repr(self.u1), "<User #1111: testuser1, test1@test.com>")
+        self.assertEqual(repr(self.u2), "<User #2222: testuser2, test2@test.com>")
 

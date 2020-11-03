@@ -7,6 +7,7 @@
 
 import os
 from unittest import TestCase
+from sqlalchemy import exc
 
 from models import db, User, Message, Follows
 
@@ -75,10 +76,102 @@ class UserModelTestCase(TestCase):
         self.assertEqual(len(self.u1.messages), 0)
         self.assertEqual(len(self.u1.followers), 0)
 
+        u = User(
+            email="test@test.com",
+            username="testuser",
+            password="password"
+        )
+
+        db.session.add(u)
+        db.session.commit()
+
+        self.assertEqual(len(u.messages), 0)
+        self.assertEqual(len(u.followers), 0)
+
+
     def test_repr(self):
         """Does __repr__ respond properly?"""
-
 
         self.assertEqual(repr(self.u1), "<User #1111: testuser1, test1@test.com>")
         self.assertEqual(repr(self.u2), "<User #2222: testuser2, test2@test.com>")
 
+
+
+    # Signup Tests
+
+    def test_signup(self):
+        u_test = User.signup("signuptestuser", "signuptest@test.com", "password", None)
+        uid = 1234567
+        u_test.id = uid
+        db.session.commit()
+
+        u_test = User.query.get(uid)
+        self.assertIsNotNone(u_test)
+        self.assertEqual(u_test.username, "signuptestuser")
+        self.assertEqual(u_test.email, "signuptest@test.com")
+        self.assertNotEqual(u_test.password, "password")
+
+        self.assertTrue(u_test.password.startswith("$2b$"))
+
+    def test_invalid_username_on_signup(self):
+        invalid_user = User.signup(None, "test@test.com", "password", None)
+        uid = 12345678
+        invalid_user.id = uid
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_email_on_signup(self):
+        invalid_email = User.signup("noemailuser", None, 'password', None)
+        uid = 123456789
+        invalid_email.id = uid
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_password_on_signup(self):
+        with self.assertRaises(ValueError) as context:
+            User.signup("testnullpassword", "test@test.com", "", None)
+
+        with self.assertRaises(ValueError) as context:
+            User.signup("testnopassword", "test@test.com", None, None)
+
+    # Authentication Tests
+
+    def test_authentication(self):
+        u = User.authenticate(self.u1.username, "password")
+        self.assertIsNotNone(u)
+        self.assertEqual(u.id, self.uid1)
+
+    def test_invalid_username(self):
+        self.assertFalse(User.authenticate("notauser", "password"))
+
+    def test_invalid_password(self):
+        self.assertFalse(User.authenticate(self.u1.username, "wrongpassword"))
+
+
+    # Following Tests
+
+    def test_user_follows(self):
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.assertEqual(len(self.u1.following), 1)
+        self.assertEqual(len(self.u1.followers), 0)
+        self.assertEqual(len(self.u2.following), 0)
+        self.assertEqual(len(self.u2.followers), 1)
+
+        self.assertEqual(self.u1.following[0].id, self.u2.id)
+        self.assertEqual(self.u2.followers[0].id, self.u1.id)
+
+    def test_is_following(self):
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.assertTrue(self.u1.is_following(self.u2))
+        self.assertFalse(self.u2.is_following(self.u1))
+
+    def test_is_followed_by(self):
+        self.u1.following.append(self.u2)
+        db.session.commit()
+
+        self.assertTrue(self.u2.is_followed_by(self.u1))
+        self.assertFalse(self.u1.is_followed_by(self.u2))

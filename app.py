@@ -287,8 +287,7 @@ def warble_liking(msg_id):
 
     msg = Message.query.get_or_404(msg_id)
 
-    if msg_id in g.user.likes:
-
+    if msg in g.user.likes:
         g.user.remove_like(msg)
 
     else:
@@ -331,8 +330,11 @@ def messages_add():
 def messages_show(message_id):
     """Show a message."""
 
-    msg = Message.query.get(message_id)
+    msg = Message.query.get_or_404(message_id)
     return render_template('messages/show.html', message=msg)
+
+# @app.route('messages/<int:message_id>/like', methods=['POST'])
+# se
 
 
 @app.route('/messages/<int:message_id>/delete', methods=["POST"])
